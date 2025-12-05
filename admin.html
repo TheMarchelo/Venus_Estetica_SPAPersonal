@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Portal Administrativo - Venus Estética & Spa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style>
+        .bg-gold {
+            background-color: #D4AF37;
+        }
+
+        .bg-gold-dark {
+            background-color: #B8941F;
+        }
+
+        .bg-gold-light {
+            background-color: #F4E4BC;
+        }
+
+        .text-gold {
+            color: #D4AF37;
+        }
+
+        .text-gold-dark {
+            color: #B8941F;
+        }
+
+        .border-gold {
+            border-color: #D4AF37;
+        }
+
+        /* Active Tab Style */
+        .tab-btn.active {
+            color: #D4AF37;
+            border-bottom-width: 2px;
+            border-color: #D4AF37;
+            background-color: #F4E4BC;
+        }
+
+        /* Hide scrollbar for tabs */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-gold text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold flex items-center">
+                        <i class="fas fa-user-shield mr-3"></i>
+                        Portal Administrativo
+                    </h1>
+                    <p class="text-sm opacity-90 mt-1 ml-10">Gestión Completa del Sistema</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="seedDatabase()"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold flex items-center shadow-sm">
+                        <i class="fas fa-database mr-2"></i>Inicializar BD
+                    </button>
+                    <a href="index.html"
+                        class="bg-white text-gold px-4 py-2 rounded-lg hover:bg-gray-50 transition font-semibold shadow-sm flex items-center">
+                        <i class="fas fa-store mr-2"></i>Tienda
+                    </a>
+                    <button onclick="logout()"
+                        class="border border-white text-white px-4 py-2 rounded-lg hover:bg-white hover:text-gold transition font-semibold flex items-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white shadow-md sticky top-20 z-30">
+        <div class="container mx-auto px-6">
+            <div class="flex overflow-x-auto space-x-1 no-scrollbar">
+                <button onclick="switchTab('productos')" id="tab-productos"
+                    class="tab-btn active px-6 py-4 font-semibold text-gold border-b-2 border-gold bg-gold-light transition whitespace-nowrap">
+                    <i class="fas fa-box mr-2"></i>Productos
+                </button>
+                <button onclick="switchTab('servicios')" id="tab-servicios"
+                    class="tab-btn px-6 py-4 font-semibold text-gray-500 hover:text-gold transition whitespace-nowrap">
+                    <i class="fas fa-spa mr-2"></i>Servicios
+                </button>
+                <button onclick="switchTab('citas')" id="tab-citas"
+                    class="tab-btn px-6 py-4 font-semibold text-gray-500 hover:text-gold transition whitespace-nowrap">
+                    <i class="fas fa-calendar-check mr-2"></i>Citas
+                </button>
+                <button onclick="switchTab('promos')" id="tab-promos"
+                    class="tab-btn px-6 py-4 font-semibold text-gray-500 hover:text-gold transition whitespace-nowrap">
+                    <i class="fas fa-tags mr-2"></i>Promociones
+                </button>
+                <button onclick="switchTab('pedidos')" id="tab-pedidos"
+                    class="tab-btn px-6 py-4 font-semibold text-gray-500 hover:text-gold transition whitespace-nowrap">
+                    <i class="fas fa-shopping-cart mr-2"></i>Pedidos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+
+        <!-- Sección Productos -->
+        <div id="section-productos" class="admin-section block">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        <i class="fas fa-box mr-2 text-gold"></i>Gestión de Productos
+                    </h2>
+                    <button onclick="openProductModal()"
+                        class="bg-gold text-white px-4 py-2 rounded-lg hover:bg-gold-dark transition shadow-md flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Producto
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Imagen</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Producto</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Categoría</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Precio</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Stock</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Estado</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productos-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Servicios -->
+        <div id="section-servicios" class="admin-section hidden">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        <i class="fas fa-spa mr-2 text-gold"></i>Gestión de Servicios
+                    </h2>
+                    <button onclick="openServiceModal()"
+                        class="bg-gold text-white px-4 py-2 rounded-lg hover:bg-gold-dark transition shadow-md flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Nuevo Servicio
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Nombre</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Categoría</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Precio</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicios-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Citas -->
+        <div id="section-citas" class="admin-section hidden">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        <i class="fas fa-calendar-check mr-2 text-gold"></i>Citas Agendadas
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Fecha</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Cliente</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Servicio</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Teléfono</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Estado</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="citas-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Promos -->
+        <div id="section-promos" class="admin-section hidden">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        <i class="fas fa-tags mr-2 text-gold"></i>Promociones Activas
+                    </h2>
+                    <button onclick="openPromoModal()"
+                        class="bg-gold text-white px-4 py-2 rounded-lg hover:bg-gold-dark transition shadow-md flex items-center">
+                        <i class="fas fa-plus mr-2"></i>Nueva Promo
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Imagen</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Título</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Precio</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promos-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Pedidos -->
+        <div id="section-pedidos" class="admin-section hidden">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-2xl font-semibold text-gray-800">
+                        <i class="fas fa-shopping-cart mr-2 text-gold"></i>Pedidos Realizados
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Fecha</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Cliente</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Total</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Estado</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pedidos-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS Fill -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Base (Centered) -->
+    <div id="admin-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeAdminModal()"></div>
+
+        <!-- Flex Container for Centering -->
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+
+                <!-- Panel -->
+                <div
+                    class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Editar Item
+                                </h3>
+                                <div class="mt-2 w-full">
+                                    <form id="admin-form" class="space-y-4">
+                                        <input type="hidden" id="edit-id">
+                                        <input type="hidden" id="edit-type">
+                                        <div id="modal-fields">
+                                            <!-- Dynamic Fields -->
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button"
+                            onclick="document.getElementById('admin-form').dispatchEvent(new Event('submit'))"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gold text-base font-medium text-white hover:bg-gold-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Guardar
+                        </button>
+                        <button type="button" onclick="closeAdminModal()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="admin.js"></script>
+    <script>
+        // Force user check just in case admin.js is slow
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) window.location.href = 'index.html';
+        });
+    </script>
+</body>
+
+</html>

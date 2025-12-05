@@ -1,0 +1,178 @@
+:root {
+    --primary-gold: #D4AF37;
+    --primary-gold-dark: #B4941F;
+    --secondary-black: #1A1A1A;
+    --light-bg: #F9F9F9;
+    --font-main: 'Lato', sans-serif;
+    --font-heading: 'Playfair Display', serif;
+    --font-accent: 'Great Vibes', cursive;
+}
+
+body {
+    font-family: var(--font-main);
+    color: #333;
+    overflow-x: hidden;
+}
+
+/* Typography Overrides */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
+    color: var(--secondary-black);
+}
+
+.fancy-text {
+    font-family: var(--font-accent);
+    color: var(--primary-gold);
+    font-weight: normal;
+}
+
+.display-3.fancy-text {
+    font-size: 4rem;
+    /* Specific for Hero */
+}
+
+.fancy-heading {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 15px;
+}
+
+.fancy-heading::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background: var(--primary-gold);
+    margin: 10px auto 0;
+}
+
+/* Button Overrides */
+.btn-gold {
+    background-color: var(--primary-gold);
+    color: #fff;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-gold:hover {
+    background-color: var(--primary-gold-dark);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.btn-outline-gold {
+    border-color: var(--primary-gold);
+    color: var(--primary-gold);
+}
+
+.btn-outline-gold:hover {
+    background-color: var(--primary-gold);
+    color: white;
+}
+
+/* Navbar */
+.navbar-brand.logo {
+    font-family: var(--font-accent);
+    font-size: 2rem;
+    color: var(--primary-gold) !important;
+}
+
+.nav-link {
+    font-weight: 500;
+    color: #555 !important;
+    font-family: var(--font-heading);
+    transition: 0.3s;
+}
+
+.nav-link:hover {
+    color: var(--primary-gold) !important;
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    min-height: 80vh;
+    padding-top: 76px;
+}
+
+.header-pad {
+    padding-top: 76px;
+    /* For anchor links */
+}
+
+/* Cards (Products/Promos) */
+.card {
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.text-gold {
+    color: var(--primary-gold) !important;
+}
+
+/* Toasts */
+.toast-container {
+    z-index: 1060;
+}
+
+/* Cart Badge */
+.badge {
+    font-size: 0.7em;
+}
+
+/* Uniform Card Styling */
+.card {
+    height: 100%;
+    /* Ensure equal height in grid */
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s;
+}
+
+.card-img-top {
+    height: 250px;
+    /* Fixed height for all images */
+    object-fit: cover;
+    /* Crop center, don't distort */
+    width: 100%;
+    border-bottom: 2px solid var(--primary-gold);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title {
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.card-body button,
+.card-body a.btn {
+    margin-top: auto;
+    /* Push buttons to bottom */
+}
+
+/* Enhanced Hover Effect */
+.hover-elevate {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-elevate:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}

@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      let role = userDoc.data.role;
+      return request.auth != null && (role == 'admin' || role == 'administrador' || role == 'Admin' || role == 'ADMIN');
+    }
+
+    // Users: Users can read/write their own profile; Admins can read all
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null; // Allow signup
+    }
+
+    // Public Collections (Read: Everyone, Write: Admin only)
+    match /productos/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /servicios/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /promociones/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders & Appointments (Create: Auth User, Read: Owner/Admin, Update: Admin)
+    match /citas/{docId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+    
+    match /pedidos/{docId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+  }
+}
