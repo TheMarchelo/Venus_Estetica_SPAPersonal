@@ -25,7 +25,8 @@
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="index.html">Volver al Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="logout()">Cerrar Sesión</a>
+                    <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="confirmLogout()">Cerrar
+                            Sesión</a>
                     </li>
                 </ul>
             </div>
@@ -106,8 +107,10 @@
                                         <thead>
                                             <tr>
                                                 <th>Fecha</th>
+                                                <th>Hora</th>
                                                 <th>Servicio</th>
                                                 <th>Estado</th>
+                                                <th>Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="table-citas-body">
@@ -126,6 +129,7 @@
                                                 <th>Fecha</th>
                                                 <th>Total</th>
                                                 <th>Estado</th>
+                                                <th>Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody id="table-pedidos-body">
@@ -144,6 +148,45 @@
         </div>
     </div>
 
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fancy-text">Cerrar Sesión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-4">¿Estás seguro que deseas salir de tu cuenta?</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-gold" onclick="logout()">Sí, cerrar sesión</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fancy-text">Detalle del Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="order-items-list" class="mb-3">
+                        <!-- Items injected here -->
+                    </div>
+                    <div class="text-end fw-bold" style="font-size: 1.2rem;">
+                        Total: <span id="order-detail-total" class="text-gold"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
 
@@ -153,7 +196,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
-    <script src="i18n.js"></script> <!-- Reusing for Toasts/Utils -->
+
 
     <script>
         // Inline Profile Logic for simplicity in this file, or move to auth.js if preferred.

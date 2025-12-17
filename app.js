@@ -3,6 +3,18 @@
 let cart = [];
 let bootstrapCartModal; // Bootstrap Modal Instance
 
+const BUSINESS_HOURS = {
+    // 0 = Sun, 1 = Mon, ...
+    0: null, // Closed
+    1: null, // Closed
+    2: { start: '09:00', end: '17:00' }, // Tue
+    3: { start: '09:00', end: '17:00' }, // Wed
+    4: { start: '09:00', end: '17:00' }, // Thu
+    5: { start: '09:00', end: '17:00' }, // Fri
+    6: { start: '09:00', end: '16:00' }  // Sat
+};
+const BLOCK_DURATION = 90; // minutes
+
 // DOM Elements
 const promosContainer = document.getElementById('promos-container');
 const servicesContainer = document.getElementById('services-container');
@@ -16,8 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Init Bootstrap Modals
     bootstrapCartModal = new bootstrap.Modal(document.getElementById('cartModal'));
 
-    // Init Language
-    setLanguage(currentLang);
+
 
     // Attempt to fetch content from Firestore, fallback to static data
     await fetchContent();
@@ -25,6 +36,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Forms
     const appForm = document.getElementById('appointment-form');
     if (appForm) appForm.addEventListener('submit', handleAppointmentSubmit);
+
+    // Time Slot Logic
+    const dateInput = document.getElementById('app-date');
+    if (dateInput) {
+        dateInput.addEventListener('change', (e) => {
+            updateTimeSlots(e.target.value);
+        });
+    }
 
     const orderForm = document.getElementById('order-form');
     if (orderForm) orderForm.addEventListener('submit', handleOrderSubmit);
@@ -111,7 +130,7 @@ function renderPromos(data) {
                     <h3 class="fancy-text">${promo.title}</h3>
                     <p class="card-text">${promo.description}</p>
                     <div class="price mb-3" style="font-size:1.5rem;">₡${promo.price.toLocaleString()}</div>
-                    <a href="#contact" class="btn btn-outline-gold">${t('btn_book')}</a>
+                    <a href="#contact" class="btn btn-outline-gold">Agendar Cita</a>
                 </div>
             </div>
         `;
@@ -143,7 +162,7 @@ function renderServices(data) {
                     <h4 class="fancy-text text-dark">${service.name}</h4>
                     <p class="text-muted small mb-2">${service.category}</p>
                     <div class="price text-gold fw-bold mb-3" style="font-size:1.25rem;">₡${service.price.toLocaleString()}</div>
-                    <button class="btn btn-outline-gold w-100" onclick="prefillAppointment('${service.name}')">${t('btn_book')}</button>
+                    <button class="btn btn-outline-gold w-100" onclick="prefillAppointment('${service.name}')">Agendar Cita</button>
                 </div>
             </div>
         `;
@@ -189,7 +208,7 @@ function populateServiceSelect(data) {
     const appServiceSelect = document.getElementById('app-service');
     if (!appServiceSelect) return;
     // Keep first option
-    appServiceSelect.innerHTML = `<option value="">${t('val_select_service')}</option>`;
+    appServiceSelect.innerHTML = `<option value="">Seleccione un servicio...</option>`;
     data.forEach(s => {
         const option = document.createElement('option');
         option.value = s.name;
@@ -198,11 +217,98 @@ function populateServiceSelect(data) {
     });
 }
 
+async function updateTimeSlots(dateString) {
+    const timeSelect = document.getElementById('app-time');
+    if (!timeSelect) return;
+
+    timeSelect.innerHTML = '<option value="">Cargando horas...</option>';
+
+    if (!dateString) {
+        timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+        return;
+    }
+
+    const date = new Date(dateString + 'T00:00:00');
+    const day = date.getDay();
+    // Removed fallback to BUSINESS_HOURS. We now rely fully on 'horarios' collection.
+
+
+    // Generate all theoretical slots
+    // OLD METHOD: const allSlots = generateTimeSlots(schedule.start, schedule.end);
+
+    try {
+        // NEW METHOD: Fetch from 'horarios' collection
+        // Now checks 'isBooked' field directly. No need to query 'citas' (Permission safe).
+        const slotsSnap = await db.collection('horarios').where('date', '==', dateString).get();
+
+        let availableSlots = [];
+        slotsSnap.forEach(doc => {
+            const d = doc.data();
+            // If isBooked is true, it's taken. If undefined or false, it's available.
+            if (!d.isBooked) {
+                availableSlots.push(d.time);
+            }
+        });
+
+        if (availableSlots.length === 0 && slotsSnap.empty) {
+            // Fallback if administration hasn't generated slots
+            timeSelect.innerHTML = '<option value="" disabled>No hay horarios disponibles (Consulte admin)</option>';
+            return;
+        }
+
+        // Sort slots nicely
+        availableSlots.sort((a, b) => {
+            return new Date('1970/01/01 ' + a.replace('a. m.', 'AM').replace('p. m.', 'PM')) -
+                new Date('1970/01/01 ' + b.replace('a. m.', 'AM').replace('p. m.', 'PM'));
+        });
+
+        timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+
+        if (availableSlots.length === 0) {
+            timeSelect.innerHTML = '<option value="" disabled>Agenda llena para este día</option>';
+        } else {
+            availableSlots.forEach(time => {
+                const option = document.createElement('option');
+                option.value = time;
+                option.textContent = time;
+                timeSelect.appendChild(option);
+            });
+        }
+
+    } catch (error) {
+        console.error("Error checking availability:", error);
+        timeSelect.innerHTML = '<option value="">Error al cargar horas</option>';
+    }
+}
+
+function generateTimeSlots(startStr, endStr) {
+    const slots = [];
+    const [startH, startM] = startStr.split(':').map(Number);
+    const [endH, endM] = endStr.split(':').map(Number);
+
+    let current = new Date();
+    current.setHours(startH, startM, 0, 0);
+
+    const end = new Date();
+    end.setHours(endH, endM, 0, 0);
+
+    while (true) {
+        const nextEnd = new Date(current.getTime() + BLOCK_DURATION * 60000);
+        if (nextEnd > end) break;
+
+        const timeString = current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        slots.push(timeString);
+
+        current = nextEnd;
+    }
+    return slots;
+}
+
 // Cart Logic
 function addToCart(id, name, price) {
     cart.push({ id, name, price });
     updateCartUI();
-    showToast(t('msg_added_cart'));
+    showToast("¡Agregado al carrito!");
 }
 
 function updateCartUI() {
@@ -213,7 +319,7 @@ function updateCartUI() {
         let total = 0;
 
         if (cart.length === 0) {
-            cartItemsContainer.innerHTML = `<p class="text-center text-muted">${t('cart_empty')}</p>`;
+            cartItemsContainer.innerHTML = `<p class="text-center text-muted">Tu carrito está vacío.</p>`;
         } else {
             cart.forEach((item, index) => {
                 total += item.price;
@@ -261,8 +367,10 @@ async function handleAppointmentSubmit(e) {
     const data = {
         userId: user.uid, // Link to user
         name: document.getElementById('app-name').value,
+        email: user.email || '', // Save email
         phone: document.getElementById('app-phone').value,
         date: document.getElementById('app-date').value,
+        time: document.getElementById('app-time').value, // Save time
         service: document.getElementById('app-service').value,
         message: document.getElementById('app-message').value,
         status: 'Pendiente',
@@ -271,10 +379,33 @@ async function handleAppointmentSubmit(e) {
 
     try {
         if (typeof db !== 'undefined') {
-            await db.collection('citas').add(data);
-            showToast(t('msg_app_sent'));
+            const batch = db.batch();
+
+            // 1. Add Cita
+            const citaRef = db.collection('citas').doc();
+            batch.set(citaRef, data);
+
+            // 2. Mark Horario as Booked
+            // Securely find the document by Date + Time (works for both Auto-generated and Manual IDs)
+            const scheduleQuery = await db.collection('horarios')
+                .where('date', '==', data.date)
+                .where('time', '==', data.time)
+                .limit(1)
+                .get();
+
+            if (!scheduleQuery.empty) {
+                const scheduleRef = scheduleQuery.docs[0].ref;
+                batch.update(scheduleRef, { isBooked: true });
+            } else {
+                console.warn("Horario doc not found for booking sync. Proceeding anyway.");
+            }
+
+            await batch.commit();
+            showToast('¡Solicitud enviada con éxito!');
         }
         e.target.reset();
+        // Refresh slots if same date selected
+        updateTimeSlots(data.date);
     } catch (error) {
         console.error("Error adding document: ", error);
         showToast('Error al enviar la solicitud.', 'danger');
@@ -294,7 +425,7 @@ async function handleOrderSubmit(e) {
     }
 
     if (cart.length === 0) {
-        showToast(t('cart_empty'), 'warning');
+        showToast('Tu carrito está vacío.', 'warning');
         return;
     }
 
@@ -311,7 +442,7 @@ async function handleOrderSubmit(e) {
     try {
         if (typeof db !== 'undefined') {
             await db.collection('pedidos').add(data);
-            showToast(t('msg_order_sent'));
+            showToast('¡Pedido enviado con éxito!');
         }
         cart = [];
         updateCartUI();

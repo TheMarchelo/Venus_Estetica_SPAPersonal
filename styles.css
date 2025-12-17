@@ -3,8 +3,8 @@
     --primary-gold-dark: #B4941F;
     --secondary-black: #1A1A1A;
     --light-bg: #F9F9F9;
-    --font-main: 'Lato', sans-serif;
-    --font-heading: 'Playfair Display', serif;
+    --font-main: 'Times New Roman', Times, serif;
+    --font-heading: 'Times New Roman', Times, serif;
     --font-accent: 'Great Vibes', cursive;
 }
 
@@ -26,9 +26,13 @@ h6 {
 }
 
 .fancy-text {
-    font-family: var(--font-accent);
+    font-family: var(--font-heading);
     color: var(--primary-gold);
     font-weight: normal;
+}
+
+.text-cursive {
+    font-family: var(--font-accent) !important;
 }
 
 .display-3.fancy-text {

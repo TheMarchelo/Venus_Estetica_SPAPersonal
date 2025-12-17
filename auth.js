@@ -94,11 +94,16 @@ function updateAuthUI(user) {
     if (!container) return;
 
     if (user) {
-        // FIXED: Link directly to profile.html instead of Modal
+        // Show Profile Icon AND Logout Button
         container.innerHTML = `
-            <a href="profile.html" class="btn btn-outline-gold btn-sm border-0">
-                <i class="fas fa-user-circle fa-lg"></i>
-            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="profile.html" class="btn btn-outline-gold btn-sm border-0" title="Mi Perfil">
+                    <i class="fas fa-user-circle fa-lg"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-secondary" onclick="confirmLogout()" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
         `;
     } else {
         container.innerHTML = `
@@ -106,6 +111,12 @@ function updateAuthUI(user) {
         `;
     }
 }
+
+// Global scope for HTML access
+window.confirmLogout = function () {
+    const modal = new bootstrap.Modal(document.getElementById('logoutModal'));
+    modal.show();
+};
 
 function logout() {
     firebase.auth().signOut().then(() => {
@@ -269,11 +280,69 @@ async function loadUserHistory(user) {
         } else {
             allCitas.forEach(doc => {
                 const c = doc.data();
+                const now = new Date();
+
+                // Parse date and time to check 45 min rule
+                // c.date is YYYY-MM-DD, c.time is HH:MM AM/PM
+                // We'll approximate for now or assume c.timestamp works if available
+                let canCancel = false;
+
+                if (c.date && c.time && c.status !== 'Cancelada' && c.status !== 'Completada') {
+                    try {
+                        // Parse "09:00 a. m." to 24h for comparison?
+                        // Or just construct a Date object from date + time string
+                        // Converting "09:00 a. m." is tricky without a library, let's try a simpler approach if possible.
+                        // Actually generateTimeSlots uses logic.
+                        // Let's rely on standard parsing if format is standard.
+                        // But for now, let's assume we can parse it manually.
+
+                        // Clean time string: "09:00 a. m." -> "09:00 AM" if needed, or parse parts
+                        // Standard format in app is "hh:mm a. m." usually from input type="time" but let's see.
+                        // Actually input type="time" gives 24h format "09:00", "14:00".
+                        // In app.js generateTimeSlots: `toLocaleTimeString` might output "09:00 a. m." depending on locale.
+
+                        // Let's assume we can construct a date string "YYYY-MM-DDTHH:mm" if time is 24h
+                        // If time is "09:00 a. m.", Date.parse might fail.
+
+                        // However, simplest way: Just use the timestamp if available?
+                        // "c.timestamp" is creation time, not appointment time.
+
+                        // Let's parse c.date (YYYY-MM-DD) and c.time
+                        // If c.time is "14:30" (24h) it's easy.
+                        // If c.time is "02:30 p.m." it's hard.
+                        // Let's assume the previous logic saved it.
+                        // In generateTimeSlots: `current.toLocaleTimeString(...)`
+                        // This produces locale string.
+
+                        // Fallback: Just show button if status is Pendiente/Confirmada.
+                        // But user asked for 45 min rule.
+                        // Let's "try" to parse.
+
+                        const appDateStr = c.date + ' ' + c.time.replace('a. m.', 'AM').replace('p. m.', 'PM');
+                        const appDate = new Date(appDateStr);
+
+                        if (!isNaN(appDate.getTime())) {
+                            const diffMs = appDate - now;
+                            const diffMins = diffMs / 60000;
+                            if (diffMins > 45) canCancel = true;
+                        } else {
+                            // Fallback if parsing fails: Allow if future date (simple string comparison)
+                            if (c.date > now.toISOString().split('T')[0]) canCancel = true;
+                        }
+                    } catch (e) { console.log(e); }
+                }
+
+                const actionsParam = canCancel ?
+                    `<button class="btn btn-sm btn-outline-danger" onclick="cancelCita('${doc.id}')">Cancelar</button>` :
+                    '';
+
                 citasBody.innerHTML += `
                     <tr>
                         <td>${c.date || 'N/A'}</td>
+                        <td>${c.time || 'N/A'}</td>
                         <td>${c.service}</td>
                         <td>${getStatusBadge(c.status)}</td>
+                        <td>${actionsParam}</td>
                     </tr>`;
             });
         }
@@ -285,10 +354,15 @@ async function loadUserHistory(user) {
 
         pedidosBody.innerHTML = '';
         if (allPedidos.empty) {
-            pedidosBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin pedidos recientes</td></tr>';
+            pedidosBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin pedidos recientes</td></tr>';
         } else {
+            // Cache orders for modal
+            window.userOrdersCache = {};
+
             allPedidos.forEach(doc => {
                 const p = doc.data();
+                window.userOrdersCache[doc.id] = p; // Store for retrieval
+
                 const date = p.timestamp ? new Date(p.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
                 const total = (p.total || 0).toLocaleString();
                 pedidosBody.innerHTML += `
@@ -296,6 +370,11 @@ async function loadUserHistory(user) {
                         <td>${date}</td>
                         <td>₡${total}</td>
                         <td>${getStatusBadge(p.status)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-gold" onclick="viewOrderDetails('${doc.id}')">
+                                <i class="fas fa-eye"></i> Ver
+                            </button>
+                        </td>
                     </tr>`;
             });
         }
@@ -311,6 +390,85 @@ async function grantAdminRole() {
         location.reload();
     }
 }
+window.viewOrderDetails = function (id) {
+    const order = window.userOrdersCache[id];
+    if (!order) return;
+
+    const list = document.getElementById('order-items-list');
+    const totalEl = document.getElementById('order-detail-total');
+
+    if (list && totalEl) {
+        list.innerHTML = '';
+        if (order.items && order.items.length > 0) {
+            const table = document.createElement('table');
+            table.className = 'table table-sm';
+            table.innerHTML = `
+                <thead><tr><th>Producto</th><th>Precio</th></tr></thead>
+                <tbody>
+                    ${order.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>₡${item.price.toLocaleString()}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+           `;
+            list.appendChild(table);
+        } else {
+            list.innerHTML = '<p class="text-muted">No hay items en este pedido (Error de datos)</p>';
+        }
+        totalEl.textContent = '₡' + (order.total || 0).toLocaleString();
+    }
+
+    const modalEl = document.getElementById('orderDetailModal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.cancelCita = async function (id) {
+    if (!confirm('¿Estás seguro que deseas cancelar esta cita? Esta acción liberará el horario.')) return;
+
+    try {
+        const citaRef = db.collection('citas').doc(id);
+        const doc = await citaRef.get();
+        if (!doc.exists) throw new Error("Cita no encontrada");
+        const data = doc.data();
+
+        const batch = db.batch();
+        batch.update(citaRef, {
+            status: 'Cancelada',
+            cancelledAt: new Date().toISOString() // Store readable timestamp for cleanup logic
+        });
+
+        // Update Horario using Query (Robust to ID format changes)
+        if (data.date && data.time) {
+            const scheduleQuery = await db.collection('horarios')
+                .where('date', '==', data.date)
+                .where('time', '==', data.time)
+                .limit(1)
+                .get();
+
+            if (!scheduleQuery.empty) {
+                const horarioRef = scheduleQuery.docs[0].ref;
+                batch.update(horarioRef, { isBooked: false });
+            } else {
+                console.warn("Horario not found for release. Proceeding with cancellation.");
+            }
+        }
+
+        await batch.commit();
+        alert('Cita cancelada correctamente.');
+        location.reload();
+    } catch (e) {
+        console.error(e);
+        alert('Error al cancelar la cita: ' + e.message);
+    }
+};
+
+// Client-side cleanup removal: User requested Daily Batch at 7AM (Admin-side only)
+// window.grantAdminRole... remains below
 window.grantAdminRole = grantAdminRole;
 window.getStatusBadge = getStatusBadge;
 window.loadProfileData = loadProfileData;

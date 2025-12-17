@@ -10,9 +10,8 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Custom Styles (After Bootstrap to override) -->
@@ -44,11 +43,7 @@
                             Admin</a>
                     </li>
 
-                    <!-- Language Toggle -->
-                    <li class="nav-item mx-2">
-                        <button class="btn btn-outline-gold btn-sm" id="lang-toggle"
-                            onclick="toggleLanguage()">ES</button>
-                    </li>
+
 
                     <!-- User Profile / Login -->
                     <li class="nav-item ms-2" id="nav-login-container">
@@ -71,7 +66,7 @@
     <!-- Hero -->
     <section id="home" class="hero d-flex align-items-center justify-content-center text-center header-pad">
         <div class="container">
-            <h1 class="fancy-text display-3" data-i18n="welcome_title">Bienvenida a Venus</h1>
+            <h1 class="fancy-text display-3 text-cursive" data-i18n="welcome_title">Bienvenida a Venus</h1>
             <p class="lead mb-4" data-i18n="welcome_subtitle">Donde la belleza y la relajación se encuentran</p>
             <a href="#contact" class="btn btn-gold btn-lg" data-i18n="btn_book">Agendar Cita</a>
         </div>
@@ -140,6 +135,12 @@
                                 <div class="mb-3">
                                     <label class="form-label" data-i18n="form_date">Fecha Deseada</label>
                                     <input type="date" class="form-control" id="app-date" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Hora Preferida</label>
+                                    <select class="form-select" id="app-time" required>
+                                        <option value="">Selecciona una fecha primero</option>
+                                    </select>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" data-i18n="form_service">Servicio de Interés</label>
@@ -296,6 +297,25 @@
         </div>
     </div>
 
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fancy-text">Cerrar Sesión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-4">¿Estás seguro que deseas salir de tu cuenta?</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-gold" onclick="logout()">Sí, cerrar sesión</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
         <!-- JS will inject toasts here -->
@@ -309,7 +329,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="data.js"></script>
     <script src="firebase-config.js"></script>
-    <script src="i18n.js"></script>
+
     <script src="auth.js"></script>
     <script src="app.js"></script>
 
