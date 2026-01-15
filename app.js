@@ -433,6 +433,7 @@ async function handleOrderSubmit(e) {
         userId: user.uid, // Link to user
         name: document.getElementById('order-name').value,
         phone: document.getElementById('order-phone').value,
+        paymentMethod: document.querySelector('input[name="paymentOption"]:checked').value, // Capture Payment Method
         items: cart.map(i => ({ name: i.name, price: i.price })),
         total: cart.reduce((acc, curr) => acc + curr.price, 0),
         status: 'Pendiente',

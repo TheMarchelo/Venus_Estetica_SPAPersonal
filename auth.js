@@ -296,40 +296,42 @@ async function loadUserHistory(user) {
                         // Let's rely on standard parsing if format is standard.
                         // But for now, let's assume we can parse it manually.
 
-                        // Clean time string: "09:00 a. m." -> "09:00 AM" if needed, or parse parts
-                        // Standard format in app is "hh:mm a. m." usually from input type="time" but let's see.
-                        // Actually input type="time" gives 24h format "09:00", "14:00".
-                        // In app.js generateTimeSlots: `toLocaleTimeString` might output "09:00 a. m." depending on locale.
+                        // Robust Date Parsing with Debugging via Console
+                        const [year, month, day] = c.date.split('-').map(Number);
 
-                        // Let's assume we can construct a date string "YYYY-MM-DDTHH:mm" if time is 24h
-                        // If time is "09:00 a. m.", Date.parse might fail.
+                        // Normalize time string: remove spaces, dots, keeps digits/letters/colon
+                        // "03:00 p. m." -> "03:00pm"
+                        const cleanTime = c.time.toLowerCase().replace(/[^a-z0-9:]/g, '');
+                        const isPM = cleanTime.includes('pm') || cleanTime.includes('p');
+                        const isAM = cleanTime.includes('am') || cleanTime.includes('a');
 
-                        // However, simplest way: Just use the timestamp if available?
-                        // "c.timestamp" is creation time, not appointment time.
+                        let hours = 0, minutes = 0;
+                        const matches = cleanTime.match(/(\d{1,2}):(\d{2})/);
 
-                        // Let's parse c.date (YYYY-MM-DD) and c.time
-                        // If c.time is "14:30" (24h) it's easy.
-                        // If c.time is "02:30 p.m." it's hard.
-                        // Let's assume the previous logic saved it.
-                        // In generateTimeSlots: `current.toLocaleTimeString(...)`
-                        // This produces locale string.
+                        if (matches) {
+                            hours = parseInt(matches[1], 10);
+                            minutes = parseInt(matches[2], 10);
 
-                        // Fallback: Just show button if status is Pendiente/Confirmada.
-                        // But user asked for 45 min rule.
-                        // Let's "try" to parse.
+                            // Adjust to 24h
+                            if (isPM && hours < 12) hours += 12;
+                            if (isAM && hours === 12) hours = 0;
+                        }
 
-                        const appDateStr = c.date + ' ' + c.time.replace('a. m.', 'AM').replace('p. m.', 'PM');
-                        const appDate = new Date(appDateStr);
+                        // Local Time Construction
+                        const appDate = new Date(year, month - 1, day, hours, minutes);
 
                         if (!isNaN(appDate.getTime())) {
                             const diffMs = appDate - now;
                             const diffMins = diffMs / 60000;
+
+                            // Debug log removed
                             if (diffMins > 45) canCancel = true;
                         } else {
-                            // Fallback if parsing fails: Allow if future date (simple string comparison)
-                            if (c.date > now.toISOString().split('T')[0]) canCancel = true;
+                            // Fallback
+                            const todayStr = now.toISOString().split('T')[0];
+                            if (c.date > todayStr) canCancel = true;
                         }
-                    } catch (e) { console.log(e); }
+                    } catch (e) { console.warn("Date parse error", e); }
                 }
 
                 const actionsParam = canCancel ?
@@ -416,6 +418,21 @@ window.viewOrderDetails = function (id) {
             list.appendChild(table);
         } else {
             list.innerHTML = '<p class="text-muted">No hay items en este pedido (Error de datos)</p>';
+            totalEl.textContent = '₡' + (order.total || 0).toLocaleString();
+
+            // Show Payment Method if available
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'mt-3 pt-2 border-top text-muted small';
+            metaDiv.innerHTML = `<p><strong>Método de Pago:</strong> ${order.paymentMethod || 'No especificado'}</p>`;
+
+            // Prevent duplicate appending if user opens/closes same modal (simple check)
+            if (!totalEl.parentElement.querySelector('.payment-info')) {
+                metaDiv.classList.add('payment-info');
+                totalEl.parentElement.appendChild(metaDiv);
+            } else {
+                // Update existing
+                totalEl.parentElement.querySelector('.payment-info').innerHTML = `<p><strong>Método de Pago:</strong> ${order.paymentMethod || 'No especificado'}</p>`;
+            }
         }
         totalEl.textContent = '₡' + (order.total || 0).toLocaleString();
     }

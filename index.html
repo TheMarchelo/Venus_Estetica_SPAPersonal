@@ -290,6 +290,21 @@
                                 <input type="tel" class="form-control" id="order-phone" required>
                             </div>
                         </div>
+
+                        <!-- Metodo de Pago -->
+                        <div class="mb-4">
+                            <label class="form-label d-block fw-bold">Método de Pago</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentOption" id="pay-sinpe"
+                                    value="SINPE Móvil" checked>
+                                <label class="form-check-label" for="pay-sinpe">SINPE Móvil</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentOption" id="pay-cash"
+                                    value="Efectivo">
+                                <label class="form-check-label" for="pay-cash">Efectivo</label>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-gold w-100" data-i18n="cart_submit">Enviar Pedido</button>
                     </form>
                 </div>

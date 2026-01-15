@@ -368,6 +368,11 @@ function editPedido(id) {
     document.getElementById('modal-fields').innerHTML = `
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Detalle de Productos</label>
+            
+            <div class="mb-2 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
+                <strong>Método de Pago:</strong> ${d.paymentMethod || 'No especificado'}
+            </div>
+
             ${itemsHtml}
             <div class="text-right font-bold text-lg">Total: ₡${(d.total || 0).toLocaleString()}</div>
         </div>
