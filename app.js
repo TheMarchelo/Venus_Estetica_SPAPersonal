@@ -25,10 +25,22 @@ const cartTotalAmount = document.getElementById('cart-total-amount');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    // Init Bootstrap Modals
-    bootstrapCartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+    // Recuperar carrito guardado si existe
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+        try {
+            cart = JSON.parse(savedCart);
+        } catch (e) {
+            console.error("Error al cargar carrito:", e);
+        }
+    }
+    updateCartUI();
 
-
+    // Inicializar Modal del Carrito de Bootstrap
+    const cartModalEl = document.getElementById('cartModal');
+    if (cartModalEl) {
+        bootstrapCartModal = new bootstrap.Modal(cartModalEl);
+    }
 
     // Attempt to fetch content from Firestore, fallback to static data
     await fetchContent();
@@ -130,7 +142,7 @@ function renderPromos(data) {
                     <h3 class="fancy-text">${promo.title}</h3>
                     <p class="card-text">${promo.description}</p>
                     <div class="price mb-3" style="font-size:1.5rem;">₡${promo.price.toLocaleString()}</div>
-                    <a href="#contact" class="btn btn-outline-gold">Agendar Cita</a>
+                    <button class="btn btn-outline-gold w-100" onclick="prefillAppointment('${promo.title}')">Agendar Cita</button>
                 </div>
             </div>
         `;
@@ -258,8 +270,21 @@ async function updateTimeSlots(dateString) {
 
         // Sort slots nicely
         availableSlots.sort((a, b) => {
-            return new Date('1970/01/01 ' + a.replace('a. m.', 'AM').replace('p. m.', 'PM')) -
-                new Date('1970/01/01 ' + b.replace('a. m.', 'AM').replace('p. m.', 'PM'));
+            const parseTime = (timeStr) => {
+                const parts = timeStr.trim().split(' ');
+                if (parts.length < 2) return 0;
+                
+                const timeParts = parts[0].split(':');
+                let hours = parseInt(timeParts[0], 10);
+                const minutes = parseInt(timeParts[1], 10);
+                const ampm = timeStr.toLowerCase();
+                
+                if (ampm.includes('p') && hours < 12) hours += 12;
+                if (ampm.includes('a') && hours === 12) hours = 0;
+                
+                return hours * 60 + minutes;
+            };
+            return parseTime(a) - parseTime(b);
         });
 
         timeSelect.innerHTML = '<option value="">Selecciona una hora</option>';
@@ -305,8 +330,13 @@ function generateTimeSlots(startStr, endStr) {
 }
 
 // Cart Logic
+function saveCart() {
+    localStorage.setItem('cart', JSON.stringify(cart));
+}
+
 function addToCart(id, name, price) {
     cart.push({ id, name, price });
+    saveCart();
     updateCartUI();
     showToast("¡Agregado al carrito!");
 }
@@ -338,6 +368,7 @@ function updateCartUI() {
 
 function removeFromCart(index) {
     cart.splice(index, 1);
+    saveCart();
     updateCartUI();
 }
 
@@ -348,8 +379,29 @@ function openCartBootstrap() {
 
 function prefillAppointment(serviceName) {
     const sel = document.getElementById('app-service');
-    if (sel) sel.value = serviceName;
-    document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+    if (sel) {
+        let exists = false;
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === serviceName) {
+                exists = true;
+                break;
+            }
+        }
+        
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = serviceName;
+            opt.textContent = serviceName + " (Promo)";
+            sel.appendChild(opt);
+        }
+        
+        sel.value = serviceName;
+    }
+    
+    const contactSection = document.getElementById('contact');
+    if (contactSection) {
+        contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 // Handlers

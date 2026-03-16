@@ -35,6 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle Mode
     const toggleBtn = document.getElementById('toggle-auth-mode');
     if (toggleBtn) toggleBtn.addEventListener('click', toggleAuthMode);
+
+    // Forgot Password
+    const forgotBtn = document.getElementById('forgot-password-link');
+    if (forgotBtn) {
+        forgotBtn.onclick = handlePasswordReset; // Using onclick for better debugging/visibility
+    }
 });
 
 // Firebase Auth Listener
@@ -196,6 +202,31 @@ async function handleAuthSubmit(e) {
     }
 }
 
+async function handlePasswordReset(e) {
+    e.preventDefault();
+    let email = document.getElementById('auth-email').value;
+
+    if (!email) {
+        email = prompt("Por favor, ingresa tu correo electrónico para enviarte el enlace de recuperación:");
+        if (!email) return;
+        // Opcionalmente ponerlo en el input para que el usuario lo vea
+        document.getElementById('auth-email').value = email;
+    }
+
+    if (!confirm(`¿Enviar enlace de recuperación a: ${email}?`)) return;
+
+    try {
+        await firebase.auth().sendPasswordResetEmail(email);
+        showToastAuth('Correo enviado. ¡Revisa tu bandeja de entrada!', 'success');
+        if (loginModal) loginModal.hide();
+    } catch (error) {
+        console.error("Error sending reset email:", error);
+        let msg = 'Error: ' + error.message;
+        if (error.code === 'auth/user-not-found') msg = 'No existe un usuario con ese correo.';
+        showToastAuth(msg, 'danger');
+    }
+}
+
 // Profile Page: Load Data
 async function loadProfileData(user, preloadedData = null) {
     let data = preloadedData;
@@ -228,6 +259,17 @@ async function loadProfileData(user, preloadedData = null) {
 
         const addressField = document.getElementById('p-address');
         if (addressField) addressField.value = data.address || '';
+
+        // Handle Admin Panel Button Visibility
+        const adminBtn = document.getElementById('btn-admin-panel');
+        if (adminBtn) {
+            const role = (data.role || '').toLowerCase();
+            if (role === 'admin' || role === 'administrador') {
+                adminBtn.style.setProperty('display', 'block', 'important');
+            } else {
+                adminBtn.style.display = 'none';
+            }
+        }
     }
 }
 
@@ -485,9 +527,6 @@ window.cancelCita = async function (id) {
 };
 
 // Client-side cleanup removal: User requested Daily Batch at 7AM (Admin-side only)
-// window.grantAdminRole... remains below
-window.grantAdminRole = grantAdminRole;
 window.getStatusBadge = getStatusBadge;
 window.loadProfileData = loadProfileData;
 window.loadUserHistory = loadUserHistory;
-// Expose for debugging if needed

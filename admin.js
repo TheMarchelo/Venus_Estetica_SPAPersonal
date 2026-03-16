@@ -16,10 +16,10 @@ if (firebase.auth()) {
                 const role = doc.exists ? (doc.data().role || '').toLowerCase() : '';
 
                 if (role !== 'admin' && role !== 'administrador') {
-                    alert('Acceso Denegado.');
+                    alert('Acceso Denegado. Tu rol actual es: ' + (role || 'ninguno'));
                     window.location.href = 'index.html';
                 } else {
-                    console.log("Admin logged in");
+                    console.log("Admin logged in. Project ID: ", firebase.app().options.projectId);
                     // Ensure the DOM is fully loaded before init
                     if (document.readyState === 'loading') {
                         document.addEventListener('DOMContentLoaded', initAdmin);
@@ -49,6 +49,7 @@ function initAdmin() {
     loadCitas();
     loadPromos();
     loadPedidos();
+    loadUsers();
     // Default date for schedule
     const dateInput = document.getElementById('schedule-date');
     if (dateInput) {
@@ -124,9 +125,85 @@ function switchTab(tabId) {
         activeTab.classList.remove('text-gray-500', 'hover:text-gold');
         activeTab.classList.add('active', 'text-gold', 'border-b-2', 'border-gold', 'bg-gold-light');
     }
+
+    // Refresh data for the specific tab
+    switch (tabId) {
+        case 'usuarios': loadUsers(); break;
+        case 'productos': loadProductos(); break;
+        case 'servicios': loadServicios(); break;
+        case 'promos': loadPromos(); break;
+        case 'citas': loadCitas(); break;
+        case 'pedidos': loadPedidos(); break;
+        case 'horarios': loadDaySchedule(); break;
+    }
 }
 
 // --- Loaders (Tailwind Styled) ---
+
+async function loadUsers() {
+    console.log("--- Iniciando loadUsers ---");
+    const table = document.getElementById('usuarios-table');
+    if (!table) {
+        console.error("No se encontró el elemento 'usuarios-table'");
+        return;
+    }
+
+    table.innerHTML = '<tr><td colspan="5" class="text-center py-4">Buscando usuarios en Firestore...</td></tr>';
+
+    try {
+        const snapshot = await db.collection('users').get();
+        console.log("Carga completada. Total usuarios encontrados:", snapshot.size);
+        table.innerHTML = '';
+
+        if (snapshot.empty) {
+            table.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No se encontraron usuarios en Firestore. Asegúrate de que existan documentos en la colección "users".</td></tr>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const u = doc.data();
+            const id = doc.id;
+            table.innerHTML += `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${u.name || ''} ${u.surname || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${u.email || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${u.phone || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}">
+                            ${u.role || 'client'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex gap-2 justify-end">
+                            <button onclick="resetUserPassword('${u.email}')" class="text-blue-600 hover:text-blue-900" title="Resetear Contraseña">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <button onclick="openUserModal('${id}')" class="text-gold hover:text-gold-dark">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteUser('${id}')" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    } catch (e) {
+        console.error("Error critico cargando usuarios:", e);
+        table.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error al cargar usuarios: ${e.message}. Revisa la consola (F12) para más detalles.</td></tr>`;
+    }
+}
+
+window.resetUserPassword = function(email) {
+    if (!email) return alert("El usuario no tiene correo registrado.");
+    if (confirm(`¿Enviar correo de recuperación de contraseña a ${email}?`)) {
+        firebase.auth().sendPasswordResetEmail(email)
+            .then(() => alert("Correo de recuperación enviado exitosamente."))
+            .catch(e => alert("Error enviando correo: " + e.message));
+    }
+};
+
 
 // Productos
 function loadProductos() {
@@ -577,6 +654,81 @@ function editPromo(id, title, description, price, image) {
     }
 }
 
+// Usuarios
+function openUserModal(id = null) {
+    openAdminModal(id ? 'Editar Usuario' : 'Nuevo Usuario', 'users');
+    document.getElementById('modal-fields').innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                <input type="text" id="f-name" class="mt-1 block w-full border-gray-300 rounded-md border p-2" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Apellidos</label>
+                <input type="text" id="f-surname" class="mt-1 block w-full border-gray-300 rounded-md border p-2" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="f-email" class="mt-1 block w-full border-gray-300 rounded-md border p-2" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                <input type="text" id="f-phone" class="mt-1 block w-full border-gray-300 rounded-md border p-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Rol</label>
+                <select id="f-role" class="mt-1 block w-full border-gray-300 rounded-md border p-2">
+                    <option value="client">Cliente</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+            ${id ? '' : `
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Contraseña (Mín. 6 carac.)</label>
+                <input type="password" id="f-password" class="mt-1 block w-full border-gray-300 rounded-md border p-2" required>
+                <p class="text-xs text-gray-400 mt-1">Necesaria para el primer acceso del usuario.</p>
+            </div>
+            `}
+        </div>
+    `;
+
+    if (id) {
+        document.getElementById('edit-id').value = id;
+        loadUserDataIntoModal(id);
+    }
+}
+
+async function loadUserDataIntoModal(id) {
+    try {
+        const doc = await db.collection('users').doc(id).get();
+        if (doc.exists) {
+            const data = doc.data();
+            document.getElementById('f-name').value = data.name || '';
+            document.getElementById('f-surname').value = data.surname || '';
+            document.getElementById('f-email').value = data.email || '';
+            document.getElementById('f-phone').value = data.phone || '';
+            document.getElementById('f-role').value = data.role || 'client';
+            // Email is usually read-only in Firebase Auth, but here we manage Firestore doc.
+            document.getElementById('f-email').disabled = true; 
+        }
+    } catch (e) {
+        console.error("Error loading user data:", e);
+    }
+}
+
+async function deleteUser(id) {
+    if (confirm("¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.")) {
+        try {
+            await db.collection('users').doc(id).delete();
+            loadUsers();
+            alert("Usuario eliminado correctamente de la base de datos.");
+        } catch (e) {
+            console.error("Error deleting user:", e);
+            alert("Error al eliminar el usuario.");
+        }
+    }
+}
+
 
 // --- Logic Helpers ---
 
@@ -696,12 +848,56 @@ async function handleFormSubmit(e) {
             data = {
                 status: document.getElementById('f-status').value
             };
+        } else if (type === 'users') {
+            data = {
+                name: document.getElementById('f-name').value,
+                surname: document.getElementById('f-surname').value,
+                email: document.getElementById('f-email').value,
+                phone: document.getElementById('f-phone').value,
+                role: document.getElementById('f-role').value,
+                updatedAt: new Date()
+            };
+            if (!id) {
+                data.password = document.getElementById('f-password').value;
+                if (!data.password || data.password.length < 6) {
+                    throw new Error("La contraseña debe tener al menos 6 caracteres.");
+                }
+            }
         }
 
         if (id) {
             await db.collection(type).doc(id).update(data);
         } else {
-            if (type === 'citas') {
+            if (type === 'users') {
+                // Registro Dual en Auth + Firestore
+                if (btn) btn.innerText = 'Registrando en Auth...';
+                
+                try {
+                    // Usamos una instancia secundaria para no desloguear al admin
+                    const secondaryApp = firebase.apps.length > 1 
+                        ? firebase.apps.find(a => a.name === 'tempReg') 
+                        : firebase.initializeApp(firebaseConfig, 'tempReg');
+                    
+                    const secondaryAuth = secondaryApp.auth();
+                    const userCred = await secondaryAuth.createUserWithEmailAndPassword(data.email, data.password);
+                    const uid = userCred.user.uid;
+                    
+                    if (btn) btn.innerText = 'Guardando en DB...';
+                    
+                    // Quitar contraseña antes de guardar en Firestore por seguridad
+                    const { password, ...firestoreData } = data;
+                    await db.collection('users').doc(uid).set(firestoreData);
+                    
+                    // Cerramos sesión de la app temporal
+                    await secondaryAuth.signOut();
+                    
+                } catch (authErr) {
+                    console.error("Error en Registro Auth:", authErr);
+                    let errMsg = authErr.message;
+                    if (authErr.code === 'auth/email-already-in-use') errMsg = "El correo ya está registrado en el sistema.";
+                    throw new Error("Error de Autenticación: " + errMsg);
+                }
+            } else if (type === 'citas') {
                 // If creating new cita manually (unlikely but possible)
             } else {
                 await db.collection(type).add(data);
@@ -907,11 +1103,12 @@ async function generateMonthSchedule() {
         d.setDate(startDate.getDate() + i);
 
         const day = d.getDay();
-        const dateStr = d.toISOString().split('T')[0];
+        // Usar hora local en lugar de toISOString() que usa UTC
+        const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
         let startH = 0, endH = 0;
 
-        if (day >= 2 && day <= 5) { // Tue-Fri
+        if (day >= 1 && day <= 5) { // Lunes-Viernes (Cambiado de Tue-Fri a Mon-Fri según uso normal, o ajusta según necesites)
             startH = 9; endH = 17;
         } else if (day === 6) { // Sat
             startH = 9; endH = 16;
@@ -949,6 +1146,40 @@ async function generateMonthSchedule() {
         alert("Error: " + e.message);
     } finally {
         if (btn) btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Generar Mes (Auto)';
+    }
+}
+
+async function clearAllSchedules() {
+    if (!confirm("¡ADVERTENCIA! Esto eliminará TODOS los horarios generados en la base de datos. Las citas existentes no se borrarán, pero los clientes no podrán reservar en los espacios eliminados. ¿Estás absolutamente seguro?")) {
+        return;
+    }
+
+    const btn = document.querySelector('button[onclick="clearAllSchedules()"]');
+    if (btn) btn.innerText = "Limpiando...";
+
+    try {
+        const slotsSnap = await db.collection('horarios').get();
+        const batch = db.batch();
+        let count = 0;
+
+        slotsSnap.forEach(doc => {
+            batch.delete(doc.ref);
+            count++;
+        });
+
+        if (count > 0) {
+            await batch.commit();
+            alert(`Se eliminaron ${count} bloques de horario correctamente.`);
+        } else {
+            alert("No hay ningún horario en la base de datos para limpiar.");
+        }
+        
+        loadDaySchedule();
+    } catch (e) {
+        console.error("Error al limpiar horarios:", e);
+        alert("Error al limpiar: " + e.message);
+    } finally {
+        if (btn) btn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i>Limpiar Todos';
     }
 }
 
@@ -1070,6 +1301,7 @@ window.loadDaySchedule = loadDaySchedule;
 window.addManualSlot = addManualSlot;
 window.deleteHorario = deleteHorario;
 window.generateMonthSchedule = generateMonthSchedule;
+window.clearAllSchedules = clearAllSchedules;
 window.syncScheduleAvailability = syncScheduleAvailability;
 window.editPedido = editPedido;
 window.deleteItem = deleteItem;
