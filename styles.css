@@ -3,8 +3,8 @@
     --primary-gold-dark: #B4941F;
     --secondary-black: #1A1A1A;
     --light-bg: #F9F9F9;
-    --font-main: 'Times New Roman', Times, serif;
-    --font-heading: 'Times New Roman', Times, serif;
+    --font-main: 'Montserrat', sans-serif;
+    --font-heading: 'Montserrat', sans-serif;
     --font-accent: 'Great Vibes', cursive;
 }
 
@@ -12,23 +12,20 @@ body {
     font-family: var(--font-main);
     color: #333;
     overflow-x: hidden;
+    background-color: #fff;
 }
 
 /* Typography Overrides */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     color: var(--secondary-black);
+    font-weight: 600;
 }
 
 .fancy-text {
     font-family: var(--font-heading);
     color: var(--primary-gold);
-    font-weight: normal;
+    font-weight: 500;
 }
 
 .text-cursive {
@@ -37,13 +34,14 @@ h6 {
 
 .display-3.fancy-text {
     font-size: 4rem;
-    /* Specific for Hero */
 }
 
 .fancy-heading {
     position: relative;
     display: inline-block;
     padding-bottom: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
 }
 
 .fancy-heading::after {
@@ -58,20 +56,24 @@ h6 {
 /* Button Overrides */
 .btn-gold {
     background-color: var(--primary-gold);
-    color: #fff;
+    color: #fff !important;
     border: none;
     transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .btn-gold:hover {
     background-color: var(--primary-gold-dark);
-    color: #fff;
+    color: #fff !important;
     transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
 }
 
 .btn-outline-gold {
-    border-color: var(--primary-gold);
+    border: 2px solid var(--primary-gold);
     color: var(--primary-gold);
+    font-weight: 600;
 }
 
 .btn-outline-gold:hover {
@@ -80,26 +82,74 @@ h6 {
 }
 
 /* Navbar */
+.navbar {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid rgba(212, 175, 55, 0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 .navbar-brand.logo {
     font-family: var(--font-accent);
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: var(--primary-gold) !important;
 }
 
-.nav-link {
-    font-weight: 500;
-    color: #555 !important;
+.navbar-nav .nav-link {
+    font-weight: 600;
+    color: #1a1a1a !important; /* High contrast black */
     font-family: var(--font-heading);
     transition: 0.3s;
+    font-size: 1rem;
+    padding: 0.5rem 1.2rem !important;
 }
 
-.nav-link:hover {
+.navbar-nav .nav-link:hover {
     color: var(--primary-gold) !important;
+    transform: translateY(-1px);
+}
+
+/* Permitir que clases de utilidad funcionen en el Navbar */
+.navbar-nav .nav-link.text-gold {
+    color: var(--primary-gold) !important;
+}
+.navbar-nav .nav-link.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Mobile Toggler */
+.navbar-toggler {
+    border: 2px solid var(--primary-gold) !important;
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+}
+
+.navbar-toggler-icon {
+    /* More gold-ish and visible */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(212, 175, 55, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+
+/* Auth Buttons */
+.btn-outline-secondary {
+    border: 1.5px solid #ddd !important;
+    color: #333 !important;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    color: var(--primary-gold) !important;
+    border-color: var(--primary-gold) !important;
 }
 
 /* Hero Section */
 .hero {
-    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
     background-size: cover;
     background-position: center;
     color: white;
@@ -179,4 +229,89 @@ h6 {
 .hover-elevate:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Footer */
+footer p.small.text-muted {
+    color: rgba(255, 255, 255, 0.7) !important; /* Force light gray/white on dark background */
+}
+
+footer p {
+    color: #fff !important;
+}
+
+/* Responsividad Móvil */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background: #fff;
+        padding-bottom: 20px;
+        margin-top: 10px;
+        border-radius: 0 0 15px 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .navbar-nav {
+        padding-top: 10px;
+    }
+    
+    .navbar-nav .nav-item {
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    /* Contenedor de Login/Perfil en móvil */
+    #nav-login-container {
+        margin: 15px 0 5px 0 !important;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    #nav-login-container .d-flex {
+        justify-content: center;
+        width: auto;
+    }
+
+    /* Carrito en móvil */
+    .navbar-nav .nav-item.ms-3 {
+        margin-left: 0 !important;
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .fa-shopping-bag {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        min-height: 50vh;
+        padding-top: 120px;
+    }
+    
+    .display-3.fancy-text {
+        font-size: 2.2rem;
+    }
+    
+    .navbar-brand.logo {
+        font-size: 1.6rem;
+    }
+
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    /* Ajuste de tarjetas en móvil */
+    .card-img-top {
+        height: 160px;
+    }
+}
+
+/* Fix for long sentences/words breaking layout */
+* {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }

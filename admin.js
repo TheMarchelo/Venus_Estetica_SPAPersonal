@@ -400,6 +400,7 @@ function loadPedidos() {
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${d.name || d.userId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${d.phone || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">₡${(d.total || 0).toLocaleString()}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                          <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">
@@ -446,8 +447,10 @@ function editPedido(id) {
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Detalle de Productos</label>
             
-            <div class="mb-2 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
-                <strong>Método de Pago:</strong> ${d.paymentMethod || 'No especificado'}
+            <div class="grid grid-cols-2 gap-2 mb-3 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                <div><strong>Cliente:</strong> ${d.name || 'N/A'}</div>
+                <div><strong>Teléfono:</strong> <a href="tel:${d.phone}" class="text-blue-600 hover:underline">${d.phone || 'N/A'}</a></div>
+                <div><strong>Método de Pago:</strong> ${d.paymentMethod || 'No especificado'}</div>
             </div>
 
             ${itemsHtml}
@@ -867,6 +870,33 @@ async function handleFormSubmit(e) {
 
         if (id) {
             await db.collection(type).doc(id).update(data);
+            
+            // Sincronización en Cascada si es usuario
+            if (type === 'users') {
+                const fullName = `${data.name} ${data.surname || ''}`.trim();
+                const syncData = {
+                    name: fullName,
+                    phone: data.phone
+                };
+
+                // Actualizar todas las citas del usuario
+                const citasSnap = await db.collection('citas').where('userId', '==', id).get();
+                const batch = db.batch();
+                citasSnap.forEach(doc => {
+                    batch.update(doc.ref, syncData);
+                });
+
+                // Actualizar todos los pedidos del usuario
+                const pedidosSnap = await db.collection('pedidos').where('userId', '==', id).get();
+                pedidosSnap.forEach(doc => {
+                    batch.update(doc.ref, syncData);
+                });
+
+                if (citasSnap.size > 0 || pedidosSnap.size > 0) {
+                    await batch.commit();
+                    console.log(`Sincronización completa: ${citasSnap.size} citas y ${pedidosSnap.size} pedidos actualizados.`);
+                }
+            }
         } else {
             if (type === 'users') {
                 // Registro Dual en Auth + Firestore
@@ -1183,6 +1213,61 @@ async function clearAllSchedules() {
     }
 }
 
+async function syncAllUserData() {
+    if (!confirm("Esto escaneará a TODOS los usuarios y actualizará sus nombres y teléfonos en TODAS las citas y pedidos. Útil para corregir datos viejos. ¿Continuar?")) return;
+
+    const btn = document.querySelector('button[onclick="syncAllUserData()"]');
+    if (btn) { btn.disabled = true; btn.innerText = "Sincronizando..."; }
+
+    try {
+        const usersSnap = await db.collection('users').get();
+        let totalCitas = 0;
+        let totalPedidos = 0;
+
+        for (const userDoc of usersSnap.docs) {
+            const userId = userDoc.id;
+            const userData = userDoc.data();
+            const fullName = `${userData.name} ${userData.surname || ''}`.trim();
+            const syncData = {
+                name: fullName,
+                phone: userData.phone || 'N/A'
+            };
+
+            const batch = db.batch();
+            let hasChanges = false;
+
+            // Sync Citas
+            const citasSnap = await db.collection('citas').where('userId', '==', userId).get();
+            citasSnap.forEach(doc => {
+                batch.update(doc.ref, syncData);
+                totalCitas++;
+                hasChanges = true;
+            });
+
+            // Sync Pedidos
+            const pedidosSnap = await db.collection('pedidos').where('userId', '==', userId).get();
+            pedidosSnap.forEach(doc => {
+                batch.update(doc.ref, syncData);
+                totalPedidos++;
+                hasChanges = true;
+            });
+
+            if (hasChanges) {
+                await batch.commit();
+            }
+        }
+
+        alert(`Sincronización masiva completada.\nCitas actualizadas: ${totalCitas}\nPedidos actualizados: ${totalPedidos}`);
+        initAdmin();
+
+    } catch (e) {
+        console.error("Error en sincronización masiva:", e);
+        alert("Error: " + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Sincronizar Todo'; }
+    }
+}
+
 async function syncScheduleAvailability() {
     if (!confirm("Esto escaneará todas las citas activas y marcará los horarios correspondientes como OCUPADOS. ¿Continuar?")) return;
 
@@ -1310,6 +1395,7 @@ window.logout = logout;
 window.closeAdminModal = closeAdminModal;
 window.previewImage = previewImage;
 window.seedDatabase = seedDatabase;
+window.syncAllUserData = syncAllUserData;
 
 // Run cleanup periodically or on load
 setInterval(cleanupCancelledAppointments, 60000); // Check every minute

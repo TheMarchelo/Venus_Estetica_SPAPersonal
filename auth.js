@@ -288,12 +288,51 @@ async function handleProfileUpdate(e) {
     };
 
     try {
-        await db.collection('users').doc(user.uid).update(data);
-        showToastAuth('Perfil actualizado correctamente.');
-        // Update display name immediately
-        document.getElementById('p-display-name').textContent = `${data.name} ${data.surname}`;
+        console.log("Iniciando actualización de perfil para:", user.uid);
+        const fullName = `${data.name} ${data.surname || ''}`.trim();
+        const syncData = {
+            name: fullName,
+            phone: data.phone
+        };
+
+        const batch = db.batch();
+        
+        // 1. Actualizar documento de usuario
+        const userRef = db.collection('users').doc(user.uid);
+        batch.update(userRef, data);
+
+        // 2. Sincronizar Citas
+        const citasSnap = await db.collection('citas').where('userId', '==', user.uid).get();
+        console.log(`Encontradas ${citasSnap.size} citas para sincronizar.`);
+        citasSnap.forEach(doc => {
+            batch.update(doc.ref, syncData);
+        });
+        
+        // 3. Sincronizar Pedidos
+        const pedidosSnap = await db.collection('pedidos').where('userId', '==', user.uid).get();
+        console.log(`Encontrados ${pedidosSnap.size} pedidos para sincronizar.`);
+        pedidosSnap.forEach(doc => {
+            batch.update(doc.ref, syncData);
+        });
+
+        await batch.commit();
+        console.log("¡Sincronización exitosa en Firestore!");
+
+        showToastAuth('Perfil y registros actualizados correctamente.');
+        
+        const dispName = document.getElementById('p-display-name');
+        if (dispName) dispName.textContent = fullName;
+
     } catch (err) {
-        showToastAuth('Error al actualizar.', 'danger');
+        console.error("ERROR CRÍTICO EN SINCRONIZACIÓN:", err);
+        let errorMsg = 'Error al actualizar el perfil.';
+        if (err.code === 'permission-denied') {
+            errorMsg = 'Error de permisos: Asegúrate de haber desplegado las reglas de Firestore.';
+            alert("AVISO: No tienes permiso para actualizar tus citas o pedidos. Contacta al administrador para que despliegue las reglas de seguridad.");
+        } else {
+            alert("Error técnico: " + err.message);
+        }
+        showToastAuth(errorMsg, 'danger');
     }
 }
 
